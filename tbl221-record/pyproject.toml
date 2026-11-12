@@ -1,0 +1,17 @@
+[project]
+name = "tbl221-record"
+version = "0.1.0"
+description = "Monitor and record system resources"
+authors = [
+    {name = "Yiğit Cemal Öztürk",email = "251307091@kocaeli.edu.tr"}
+]
+license = "3BSD"
+requires-python = ">=3.13"
+dependencies = [
+
+]
+
+
+[build-system]
+requires = ["poetry-core>=2.0.0,<3.0.0"]
+build-backend = "poetry.core.masonry.api"

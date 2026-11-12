@@ -1,0 +1,19 @@
+[project]
+name = "tbl221-graphui"
+version = "0.1.0"
+description = "Sistem kaynakları izleme ve raporlama aracı"
+authors = [
+    {name = "Yiğit Cemal Öztürk",email = "251307091@kocaeli.edu.tr"}
+]
+license = "3BSD"
+dependencies = [
+    "pyside6 (>=6.12.0,<7.0.0); python_version >='3.10' and python_version <'3.16'"
+]
+
+
+[build-system]
+requires = ["poetry-core>=2.0.0,<3.0.0"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.poetry.scripts]
+main = "main.py"
