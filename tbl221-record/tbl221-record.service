@@ -1,0 +1,9 @@
+[Unit]
+Description=TBL221 Kayıt Hizmeti
+
+[Service]
+ExecStart=/usr/bin/python3 /usr/local/bin/tbl221-record
+Restart=always
+
+[Install]
+WantedBy=multi-user.target
