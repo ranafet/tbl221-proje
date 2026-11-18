@@ -85,8 +85,18 @@ make package
 
 ## Test
 
+Yerel testler:
+
 ```bash
 make test
 ```
+
+OCI uyumlu test konteyneri, birim testlerini, gerçek kaynak ölçümünü ve Qt offscreen arayüz başlangıcını izole bir ortamda doğrular:
+
+```bash
+make container-test
+```
+
+Varsayılan araç Podman'dır. Docker kullanmak için `make container-test CONTAINER_ENGINE=docker` komutunu çalıştırın. Ayrıntılar `docs/containers.md` dosyasındadır.
 
 Normal kullanım, kontrollü yük ve servis yeniden başlatma adımları `docs/commands.md` dosyasında verilmiştir.

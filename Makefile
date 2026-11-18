@@ -3,8 +3,10 @@ VERSION := 1.0.0
 SOURCE_DATE_EPOCH ?= 0
 DIST_DIR := $(CURDIR)/dist
 SOURCE_ARCHIVE := $(DIST_DIR)/tbl221-monitor-$(VERSION).tar.gz
+CONTAINER_ENGINE ?= podman
+TEST_IMAGE ?= tbl221-monitor-test:$(VERSION)
 
-.PHONY: all build test wheels source package package-deb package-rpm clean help
+.PHONY: all build test wheels source package package-deb package-rpm container-build container-test clean help
 
 all: build
 
@@ -17,6 +19,8 @@ help:
 	  'make package-deb  Build Debian binary packages' \
 	  'make package-rpm  Build RPM binary packages' \
 	  'make package      Build both DEB and RPM packages' \
+	  'make container-build  Build the OCI test image' \
+	  'make container-test   Build and run the OCI test image' \
 	  'make clean        Remove generated artifacts'
 
 build:
@@ -48,6 +52,12 @@ package-rpm: build source
 	  --define '_sourcedir $(DIST_DIR)' \
 	  --define '_rpmdir $(DIST_DIR)/rpm' \
 	  --define '_srcrpmdir $(DIST_DIR)/srpm'
+
+container-build:
+	$(CONTAINER_ENGINE) build --file Containerfile --tag $(TEST_IMAGE) .
+
+container-test: container-build
+	$(CONTAINER_ENGINE) run --rm $(TEST_IMAGE)
 
 clean:
 	rm -rf dist
