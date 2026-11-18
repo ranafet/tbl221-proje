@@ -1,19 +1,20 @@
 [project]
 name = "tbl221-graphui"
-version = "0.1.0"
-description = "Sistem kaynakları izleme ve raporlama aracı"
+version = "1.0.0"
+description = "TBL221 Linux system resource monitoring dashboard"
 authors = [
-    {name = "Yiğit Cemal Öztürk",email = "251307091@kocaeli.edu.tr"}
+    {name = "Yiğit Cemal Öztürk", email = "251307091@kocaeli.edu.tr"}
 ]
-license = "3BSD"
-dependencies = [
-    "pyside6 (>=6.12.0,<7.0.0); python_version >='3.10' and python_version <'3.16'"
-]
+license = {text = "BSD-3-Clause"}
+requires-python = ">=3.11,<3.16"
+dependencies = ["PySide6>=6.8,<7.0"]
 
+[project.scripts]
+tbl221-graphui = "main:main"
 
 [build-system]
-requires = ["poetry-core>=2.0.0,<3.0.0"]
-build-backend = "poetry.core.masonry.api"
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
 
-[tool.poetry.scripts]
-main = "main.py"
+[tool.setuptools]
+py-modules = ["main"]
