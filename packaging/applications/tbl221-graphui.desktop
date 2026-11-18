@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=TBL221 System Monitor
+Comment=View Linux system resource measurements
+Exec=tbl221-graphui
+Icon=utilities-system-monitor
+Terminal=false
+Categories=System;Monitor;
+Keywords=system;monitor;cpu;memory;disk;

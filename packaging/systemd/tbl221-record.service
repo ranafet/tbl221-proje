@@ -1,0 +1,23 @@
+[Unit]
+Description=TBL221 Linux System Resource Recorder
+Documentation=man:tbl221-record(8)
+After=local-fs.target
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/tbl221-record --config /etc/tbl221-record.toml
+Restart=on-failure
+RestartSec=5s
+User=root
+Group=root
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/lib/tbl221-record
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=tbl221-record
+
+[Install]
+WantedBy=multi-user.target

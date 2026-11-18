@@ -1,1 +1,26 @@
 report/PROMPT.md
+
+# LaTeX build artifacts (keep report.tex and the final report.pdf)
+report/*.aux
+report/*.bbl
+report/*.bcf
+report/*.blg
+report/*.fdb_latexmk
+report/*.fls
+report/*.lof
+report/*.log
+report/*.lot
+report/*.out
+report/*.run.xml
+report/*.synctex.gz
+report/*.toc
+report/*.xdv
+report/raportaslak.doc
+report/report.pdf
+
+# Python and package build artifacts
+**/__pycache__/
+*.py[cod]
+**/*.egg-info/
+**/build/
+dist/
