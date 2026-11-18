@@ -11,12 +11,13 @@ Bu proje Linux'ta CPU, bellek, takas, disk, süreç sayısı ve load average de�
 
 ## Kılavuz sayfaları
 
-Her iki programın sistem yönetimi kılavuzları 8. bölüm biçimindedir:
+Programların sistem yönetimi kılavuzları 8. bölüm, recorder yapılandırma dosyası kılavuzu ise 5. bölüm biçimindedir:
 
 - `docs/tbl221-record.8`
+- `docs/tbl221-record.toml.5`
 - `docs/tbl221-graphui.8`
 
-Kaynak ağaçtan görüntülemek için örneğin `man ./docs/tbl221-record.8` komutunu kullanın.
+Kaynak ağaçtan görüntülemek için örneğin `man ./docs/tbl221-record.toml.5` komutunu kullanın.
 
 ## Hızlı başlangıç (root gerektirmez)
 

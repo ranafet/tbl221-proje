@@ -48,6 +48,7 @@ install -D -m 0755 packaging/bin/tbl221-record %{buildroot}%{_bindir}/tbl221-rec
 install -D -m 0644 packaging/systemd/tbl221-record.service %{buildroot}%{_unitdir}/tbl221-record.service
 install -D -m 0644 tbl221-record/config/default.toml %{buildroot}%{_sysconfdir}/tbl221-record.toml
 install -d %{buildroot}%{_sharedstatedir}/tbl221-record
+install -D -m 0644 docs/tbl221-record.toml.5 %{buildroot}%{_mandir}/man5/tbl221-record.toml.5
 install -D -m 0644 docs/tbl221-record.8 %{buildroot}%{_mandir}/man8/tbl221-record.8
 
 install -D -m 0644 tbl221-graphui/main.py %{buildroot}%{_prefix}/libexec/tbl221-graphui/main.py
@@ -79,6 +80,7 @@ fi
 %{_unitdir}/tbl221-record.service
 %config(noreplace) %{_sysconfdir}/tbl221-record.toml
 %dir %{_sharedstatedir}/tbl221-record
+%{_mandir}/man5/tbl221-record.toml.5%{?ext_man}
 %{_mandir}/man8/tbl221-record.8%{?ext_man}
 
 %files -n tbl221-graphui

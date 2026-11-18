@@ -51,7 +51,9 @@ Ayrıntılı günlük çıktısını etkinleştirir.
 .BR \-h , " " \-\-help
 Kısa kullanım bilgisini gösterir ve çıkar.
 .SH YAPILANDIRMA
-Yapılandırma TOML biçimindedir. Desteklenen üst düzey anahtarlar şunlardır:
+Yapılandırma TOML biçimindedir. Dosya biçiminin ayrıntılı açıklaması için
+.BR tbl221-record.toml (5)
+sayfasına bakın. Desteklenen üst düzey anahtarlar şunlardır:
 .TP
 .B record_period
 Saniye cinsinden ölçüm aralığı. Varsayılan 5, en küçük değer 0,1'dir.
@@ -139,6 +141,7 @@ journalctl \-u tbl221-record \-f
 .RE
 .fi
 .SH AYRICA BAKINIZ
+.BR tbl221-record.toml (5),
 .BR tbl221-graphui (8),
 .BR systemctl (1),
 .BR systemd.service (5),

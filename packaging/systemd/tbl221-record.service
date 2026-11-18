@@ -1,6 +1,6 @@
 [Unit]
 Description=TBL221 Linux System Resource Recorder
-Documentation=man:tbl221-record(8)
+Documentation=man:tbl221-record(8) man:tbl221-record.toml(5)
 After=local-fs.target
 
 [Service]

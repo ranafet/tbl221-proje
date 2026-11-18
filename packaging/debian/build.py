@@ -94,6 +94,7 @@ def record_data() -> bytes:
         add_source(archive, ROOT / "packaging/bin/tbl221-record", "usr/bin/tbl221-record", 0o755)
         add_source(archive, ROOT / "packaging/systemd/tbl221-record.service", "usr/lib/systemd/system/tbl221-record.service")
         add_source(archive, ROOT / "tbl221-record/config/default.toml", "etc/tbl221-record.toml")
+        add_bytes(archive, "usr/share/man/man5/tbl221-record.toml.5.gz", gzip.compress((ROOT / "docs/tbl221-record.toml.5").read_bytes(), mtime=EPOCH))
         add_bytes(archive, "usr/share/man/man8/tbl221-record.8.gz", gzip.compress((ROOT / "docs/tbl221-record.8").read_bytes(), mtime=EPOCH))
         add_source(archive, ROOT / "README.md", "usr/share/doc/tbl221-record/README.md")
         add_source(archive, ROOT / "LICENSE", "usr/share/doc/tbl221-record/LICENSE")

@@ -68,6 +68,7 @@ openSUSE üzerinde `dnf` yerine `zypper install` kullanılabilir.
 /usr/libexec/tbl221-graphui/
 /usr/lib/systemd/system/tbl221-record.service
 /usr/share/applications/tbl221-graphui.desktop
+/usr/share/man/man5/
 /usr/share/man/man8/
 /etc/tbl221-record.toml
 /var/lib/tbl221-record/
