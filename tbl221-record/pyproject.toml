@@ -1,17 +1,25 @@
 [project]
 name = "tbl221-record"
-version = "0.1.0"
-description = "Monitor and record system resources"
+version = "1.0.0"
+description = "Linux system resource monitor and SQLite recorder"
 authors = [
-    {name = "Yiğit Cemal Öztürk",email = "251307091@kocaeli.edu.tr"}
+    {name = "Yiğit Cemal Öztürk", email = "251307091@kocaeli.edu.tr"}
 ]
-license = "3BSD"
-requires-python = ">=3.13"
-dependencies = [
+license = {text = "BSD-3-Clause"}
+requires-python = ">=3.11"
+dependencies = []
 
-]
-
+[project.scripts]
+tbl221-record = "main:main"
 
 [build-system]
-requires = ["poetry-core>=2.0.0,<3.0.0"]
-build-backend = "poetry.core.masonry.api"
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+py-modules = ["main"]
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["config*", "db*", "model*", "util*"]
+namespaces = true

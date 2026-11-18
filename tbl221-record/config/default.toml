@@ -1,0 +1,15 @@
+# TBL221 resource recorder configuration
+record_period = 5
+database_path = "/var/lib/tbl221-record/tbl221-record.db"
+disk_path = "/"
+retention_days = 30
+
+[thresholds]
+cpu_percent = 85.0
+memory_percent = 85.0
+disk_percent = 90.0
+load_1 = 8.0
+
+[alerts]
+# Number of seconds before the same alert may be emitted again.
+cooldown_seconds = 300
