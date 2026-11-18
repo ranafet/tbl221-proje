@@ -1,0 +1,149 @@
+.TH TBL221-RECORD 8 "18 Kasım 2026" "tbl221-record 1.0.0" "Sistem Yönetimi Komutları"
+.SH NAME
+tbl221-record \- Linux sistem kaynaklarını ölçer ve SQLite veritabanına kaydeder
+.SH KULLANIM
+.B tbl221-record
+.RI [ seçenekler ]
+.br
+.B python3 main.py
+.RI [ seçenekler ]
+.SH AÇIKLAMA
+.B tbl221-record
+Linux sistemindeki CPU, bellek, takas, disk, süreç sayısı ve yük ortalaması
+bilgilerini periyodik olarak toplar. Ölçümler zaman damgalarıyla bir SQLite
+veritabanına yazılır.
+.PP
+CPU, bellek, disk veya bir dakikalık yük ortalaması yapılandırılmış eşiğe
+ulaştığında bir uyarı kaydı oluşturulur. Aynı ölçüt için yinelenen uyarılar,
+yapılandırılan bekleme süresince bastırılır. Eski ölçümler saklama süresine
+göre düzenli olarak temizlenir.
+.PP
+Program normalde sürekli çalışır ve
+.BR SIGINT
+veya
+.BR SIGTERM
+alana kadar ölçüm yapar. systemd hizmeti olarak ya da doğrudan komut
+satırından çalıştırılabilir.
+.SH SEÇENEKLER
+.TP
+.BI \-\-config " DOSYA"
+TOML yapılandırma dosyasının yolunu belirtir. Belirtilmezse önce
+.B TBL221_CONFIG
+ortam değişkeni, o da tanımlı değilse
+.I /etc/tbl221-record.toml
+kullanılır. Dosya yoksa yerleşik varsayılanlar geçerlidir.
+.TP
+.BI \-\-database " DOSYA"
+Yapılandırmadaki
+.B database_path
+değerini geçersiz kılar ve ölçümlerin yazılacağı SQLite veritabanını belirtir.
+.TP
+.BI \-\-interval " SANİYE"
+Yapılandırmadaki ölçüm aralığını saniye cinsinden geçersiz kılar. En küçük
+etkin değer 0,1 saniyedir.
+.TP
+.B \-\-once
+Tek bir ölçüm alır, veritabanına yazar ve çıkar.
+.TP
+.B \-\-verbose
+Ayrıntılı günlük çıktısını etkinleştirir.
+.TP
+.BR \-h , " " \-\-help
+Kısa kullanım bilgisini gösterir ve çıkar.
+.SH YAPILANDIRMA
+Yapılandırma TOML biçimindedir. Desteklenen üst düzey anahtarlar şunlardır:
+.TP
+.B record_period
+Saniye cinsinden ölçüm aralığı. Varsayılan 5, en küçük değer 0,1'dir.
+.TP
+.B database_path
+SQLite veritabanının yolu. Varsayılan
+.IR /var/lib/tbl221-record/tbl221-record.db 'dir.
+.TP
+.B disk_path
+Kullanımı ölçülecek dosya sistemi yolu. Varsayılan
+.IR / 'dir.
+.TP
+.B retention_days
+Ölçümlerin saklanacağı gün sayısı. Varsayılan 30'dur.
+.PP
+.B [thresholds]
+bölümünde
+.BR cpu_percent ,
+.BR memory_percent ,
+.BR disk_percent
+ve
+.B load_1
+eşikleri tanımlanabilir. Varsayılan değerler sırasıyla 85, 85, 90 ve 8'dir.
+.PP
+.B [alerts]
+bölümündeki
+.B cooldown_seconds
+aynı ölçüt için uyarılar arasındaki en kısa süreyi saniye cinsinden belirler.
+Varsayılan 300'dür.
+.SH ORTAM
+.TP
+.B TBL221_CONFIG
+.B \-\-config
+verilmediğinde kullanılacak yapılandırma dosyasını belirtir.
+.SH DOSYALAR
+.TP
+.I /etc/tbl221-record.toml
+Sistem genelindeki varsayılan yapılandırma dosyası.
+.TP
+.I /var/lib/tbl221-record/tbl221-record.db
+Varsayılan SQLite ölçüm ve uyarı veritabanı.
+.TP
+.I /usr/libexec/tbl221-record/main.py
+Yerel DEB/RPM paketinin yerleştirdiği hizmet programı.
+.TP
+.I /usr/lib/systemd/system/tbl221-record.service
+Yerel paketin systemd hizmet birimi. Kaynak ağaçtaki kurulum betiği bunun
+yerine programı
+.I /opt
+yoluna ve birimi
+.I /etc/systemd/system
+yoluna kurar.
+.SH SİNYALLER
+.TP
+.B SIGINT, SIGTERM
+Geçerli ölçüm döngüsünü düzenli biçimde sonlandırır ve programdan çıkar.
+.SH ÇIKIŞ DURUMU
+Başarılı normal kapanışta 0 döndürülür. Geçersiz komut satırı seçenekleri,
+yapılandırma hataları veya başlatma sırasında oluşan işlenmemiş hatalar sıfırdan
+farklı bir durumla sonuçlanır. Tekil ölçüm hataları günlüğe yazılır ve sürekli
+çalışma kipinde sonraki ölçüm denenir.
+.SH ÖRNEKLER
+Tek ölçüm alıp geçici bir veritabanına yazmak:
+.PP
+.nf
+.RS
+python3 main.py \-\-once \-\-database /tmp/tbl221-record.db \-\-verbose
+.RE
+.fi
+.PP
+İki saniyede bir ölçüm yapmak:
+.PP
+.nf
+.RS
+python3 main.py \-\-database /tmp/tbl221-record.db \-\-interval 2
+.RE
+.fi
+.PP
+Kurulu hizmetin durumunu ve günlüklerini incelemek:
+.PP
+.nf
+.RS
+systemctl status tbl221-record
+journalctl \-u tbl221-record \-f
+.RE
+.fi
+.SH AYRICA BAKINIZ
+.BR tbl221-graphui (8),
+.BR systemctl (1),
+.BR systemd.service (5),
+.BR sqlite3 (1)
+.SH YAZAR
+Yiğit Cemal Öztürk.
+.SH LİSANS
+BSD 3-Clause lisansı altında yayımlanmıştır.

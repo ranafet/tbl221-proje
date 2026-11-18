@@ -1,0 +1,211 @@
+\documentclass[9pt,a4paper,twocolumn]{extarticle}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[turkish,english]{babel}
+\usepackage{mathptmx}
+\usepackage[left=20mm,right=20mm,top=25mm,bottom=37mm,columnsep=10mm]{geometry}
+\usepackage{titlesec}
+\usepackage{booktabs}
+\usepackage{tabularx}
+\usepackage{graphicx}
+\usepackage{url}
+\usepackage[hidelinks]{hyperref}
+\usepackage{xcolor}
+\usepackage{listings}
+\usepackage{enumitem}
+\usepackage{caption}
+\usepackage{tikz}
+\usetikzlibrary{arrows.meta,positioning}
+
+\pagestyle{empty}
+\setlength{\parindent}{4mm}
+\setlength{\parskip}{0pt}
+\setlength{\columnsep}{10mm}
+\setlist{nosep,leftmargin=4mm}
+\captionsetup{font=small,labelsep=colon,justification=centering}
+\titleformat{\section}{\bfseries\centering\normalsize}{\thesection.}{0.4em}{}
+\titleformat{\subsection}{\bfseries\raggedright\normalsize}{\thesubsection.}{0.4em}{}
+\titleformat{\subsubsection}{\itshape\raggedright\normalsize}{\thesubsubsection.}{0.4em}{}
+\titlespacing*{\section}{0pt}{8pt}{4pt}
+\titlespacing*{\subsection}{0pt}{6pt}{3pt}
+\titlespacing*{\subsubsection}{0pt}{5pt}{2pt}
+\lstset{
+  basicstyle=\ttfamily\scriptsize,
+  breaklines=true,
+  frame=single,
+  columns=fullflexible,
+  aboveskip=4pt,
+  belowskip=4pt
+}
+
+\newcommand{\keywordname}{\textbf{Anahtar Kelimeler---}}
+\newcommand{\keywordsname}{\textbf{Keywords---}}
+
+\begin{document}
+\selectlanguage{turkish}
+\shorthandoff{=}
+
+\twocolumn[
+\vspace*{5mm}
+\begin{center}
+{\Large\bfseries Linux sistem kaynaklarının izlenmesi ve grafiksel raporlanması\par}
+\vspace{4pt}
+{\large Linux System Resource Monitoring and Graphical Reporting\par}
+\vspace{8pt}
+{\normalsize Yiğit Cemal Öztürk\par}
+\vspace{2pt}
+{\small Kocaeli Üniversitesi\par}
+{\small 251307091@kocaeli.edu.tr\par}
+\end{center}
+\vspace{8pt}
+
+\noindent\textit{\textbf{Özet---}Bu çalışmada Linux işletim sistemlerinde süreç, işlemci, bellek ve disk kullanımını periyodik olarak izleyen bir uygulama geliştirilmiştir. Bağımlılıksız Python kayıt servisi, işlemci kullanımını \texttt{/proc/stat} sayaçlarının iki ölçüm arasındaki farkından hesaplamakta; bellek verilerini \texttt{/proc/meminfo} üzerinden, disk verilerini dosya sistemi istatistiklerinden ve süreç sayısını \texttt{/proc} dizininden toplamaktadır. Zaman damgalı ölçümler eşzamanlı okumaya uygun SQLite veritabanında saklanmaktadır. Yapılandırılabilir CPU, bellek, disk ve sistem yükü eşikleri aşıldığında kalıcı uyarı üretilmektedir. PySide6 arayüzü güncel değerleri, zaman serisi grafiklerini ve uyarıları göstermekte, ayrıca CSV dışa aktarımı sağlamaktadır. Kayıt bileşeni güvenlik kısıtları uygulanmış bir systemd servisi olarak kurulabilmektedir. Birim testleri ve gerçek sistem ölçümüyle temel işlevler doğrulanmıştır.}
+
+\vspace{4pt}
+\noindent\keywordname Linux, kaynak izleme, systemd, SQLite, PySide6.
+
+\vspace{12mm}
+\selectlanguage{english}
+\noindent\textit{\textbf{Abstract---}This study presents an application that periodically monitors process, processor, memory, and disk utilization on Linux operating systems. The dependency-free Python recorder calculates processor utilization from the difference between two \texttt{/proc/stat} samples, obtains memory data from \texttt{/proc/meminfo}, collects disk data from file-system statistics, and counts processes through \texttt{/proc}. Timestamped measurements are stored in an SQLite database configured for concurrent reads. Persistent alerts are generated when configurable CPU, memory, disk, or system-load thresholds are exceeded. A PySide6 interface displays current values, time-series charts, and alerts, and supports CSV export. The recorder can be installed as a systemd service with security restrictions. Unit tests and a real system measurement were used to verify the main functions.}
+
+\vspace{4pt}
+\noindent\keywordsname Linux, resource monitoring, systemd, SQLite, PySide6.
+\vspace{10pt}
+]
+
+\selectlanguage{turkish}
+\shorthandoff{=}
+\section{Giriş}
+
+Sunucularda ve kişisel bilgisayarlarda performans sorunlarının belirlenebilmesi için kaynak tüketiminin yalnız anlık değil, zaman içinde izlenmesi gerekir. Linux bu verilerin önemli bir bölümünü sanal \texttt{/proc} dosya sistemi üzerinden sunar. Ancak buradaki bazı değerler doğrudan yüzde değildir. Örneğin işlemci satırları sistem açılışından beri biriken zaman sayaçlarıdır ve kullanım oranı iki örnek arasındaki değişimden hesaplanmalıdır \cite{procstat}.
+
+Bu projede CPU, fiziksel bellek, takas alanı, disk, süreç sayısı ve load average değerlerini belirli aralıklarla kaydeden iki bileşenli bir sistem gerçekleştirilmiştir. Kayıt servisi grafik oturumundan bağımsız çalışırken kullanıcı arayüzü veritabanını salt okunur açarak ölçümleri görüntüler. Böylece arayüz kapalı olsa dahi veri toplama devam eder.
+
+\section{Linux kaynak yönetimi}
+
+Linux çekirdeği her süreci benzersiz bir PID ile temsil eder. Süreçlerin durumu, CPU zamanı, açık dosyaları ve bellek bilgileri \texttt{/proc/PID} altında incelenebilir. Çalışan bir süreç genellikle \texttt{R}, uyuyan süreç \texttt{S}, kesilemeyen bekleme \texttt{D} ve tamamlandığı hâlde üst süreci tarafından toplanmamış süreç \texttt{Z} durumundadır \cite{procman}.
+
+\subsection{Kaynak izleme komutları}
+
+\texttt{top}, toplam sistem durumunu ve süreçleri etkileşimli olarak gösterir. \texttt{P} CPU'ya, \texttt{M} belleğe göre sıralama yapar. Betiklerde tek bir görüntü almak için aşağıdaki kullanım uygundur:
+
+\begin{lstlisting}[language=bash]
+top -b -n 1
+\end{lstlisting}
+
+\texttt{ps}, çağrıldığı andaki süreç listesini üretir. En çok CPU kullanan süreçler şu şekilde bulunabilir:
+
+\begin{lstlisting}[language=bash]
+ps -eo pid,user,%cpu,%mem,stat,comm \
+  --sort=-%cpu
+\end{lstlisting}
+
+\texttt{free -h}, fiziksel bellek ve takas kullanımını okunabilir birimlerle verir. Linux dosya önbelleğini gerektiğinde serbest bırakabildiğinden yalnız \texttt{free} değil, \texttt{available} alanı değerlendirilmelidir. Bu nedenle geliştirilen uygulama da \texttt{MemAvailable} değerini kullanır \cite{procman}.
+
+\texttt{df -h /}, kök dosya sisteminin toplam ve kullanılabilir alanını; \texttt{df -i /} inode kullanımını gösterir. \texttt{du -sh /var/log} ise belirtilen dizindeki erişilebilir dosyaların toplam boyutunu hesaplar. Bir süreç tarafından açık tutulan silinmiş dosyalar \texttt{df} kullanımına dâhil olduğu hâlde \texttt{du} sonucunda görünmeyebilir.
+
+\section{Sistem tasarımı}
+
+Sistem, Şekil~\ref{fig:mimari}'de gösterildiği gibi kayıt servisi, SQLite veri deposu ve grafik arayüzünden oluşur. İki uygulamanın ayrılması, servis sürekliliğini ve arayüzün isteğe bağlı çalıştırılmasını sağlar.
+
+\begin{figure}[ht]
+\centering
+\begin{tikzpicture}[
+  node distance=5mm,
+  box/.style={draw,rounded corners,align=center,minimum width=29mm,minimum height=8mm,font=\scriptsize},
+  arrow/.style={-{Latex[length=2mm]},thick}
+]
+\node[box] (proc) {Linux \texttt{/proc}\\ve dosya sistemi};
+\node[box,below=of proc] (record) {Python kayıt\\servisi};
+\node[box,below left=5mm and -4mm of record] (db) {SQLite\\WAL};
+\node[box,below right=5mm and -4mm of record] (journal) {systemd\\journal};
+\node[box,below=11mm of record] (gui) {PySide6 grafik\\arayüzü};
+\draw[arrow] (proc) -- (record);
+\draw[arrow] (record) -- (db);
+\draw[arrow] (record) -- (journal);
+\draw[arrow] (db) -- (gui);
+\end{tikzpicture}
+\caption{Uygulamanın bileşenleri ve veri akışı.}
+\label{fig:mimari}
+\end{figure}
+
+\subsection{Ölçüm yöntemi}
+
+\texttt{/proc/stat} içindeki toplam CPU satırından iki örnek alınır. Toplam ve boşta geçen zaman farkları kullanılarak CPU yüzdesi Eşitlik~\ref{eq:cpu} ile hesaplanır. I/O bekleme süresi boşta zamana dâhil edilmiştir.
+
+\begin{equation}
+U_{CPU}=100\left(1-\frac{\Delta T_{idle}}{\Delta T_{total}}\right)
+\label{eq:cpu}
+\end{equation}
+
+Bellek kullanımı \texttt{MemTotal - MemAvailable}, takas kullanımı ise \texttt{SwapTotal - SwapFree} olarak hesaplanır. Disk kapasitesi Python standart kitaplığındaki \texttt{shutil.disk\_usage} ile ölçülür. Sayısal adlı \texttt{/proc} alt dizinlerinin sayısı süreç sayısını verir. Bir, beş ve on beş dakikalık sistem yükleri \texttt{os.getloadavg} üzerinden alınır.
+
+\subsection{Veri modeli}
+
+Her ölçüm Unix UTC zaman damgası, CPU yüzdesi, bellek/takas/disk toplam ve kullanılan byte değerleri, süreç sayısı ve üç load average alanıyla \texttt{readings} tablosuna yazılır. Eşik aşımı; zaman, metrik, değer, eşik ve açıklama alanlarıyla \texttt{alerts} tablosunda saklanır. SQLite WAL modu, servis yazarken arayüzün beklemeden okuma yapabilmesine yardımcı olur \cite{sqlitewal}.
+
+\subsection{Uyarı ve saklama politikası}
+
+TOML yapılandırmasında ölçüm aralığı, veritabanı yolu, izlenen disk ve saklama süresi değiştirilebilir. Varsayılan CPU ve bellek eşikleri \%85, disk eşiği \%90'dır. Aynı kaynak sürekli yüksek kaldığında uyarı seli oluşmaması için metrik başına 300 saniyelik bekleme uygulanır. Süresi dolan ölçümler yapılandırılabilir saklama politikasına göre temizlenir.
+
+\section{Gerçekleştirim}
+
+Kayıt bileşeni yalnız Python standart kitaplığını kullanır. Monotonik saatle planlama, sistem saatindeki değişikliklerin ölçüm aralığını bozmasını engeller. SIGINT ve SIGTERM sinyalleri kontrollü kapanışa dönüştürülür. Ölçüm hataları servisi sonlandırmak yerine journal'a ayrıntılı hata olarak kaydedilir.
+
+PySide6 arayüzünde CPU, bellek, disk ve süreç kartları; dört zaman serisi grafiği ve son uyarılar tablosu bulunur. Veritabanı salt okunur URI ile açılır. Arayüz beş saniyede bir yenilenir, gösterilecek örnek sayısı değiştirilebilir ve görüntülenen veri CSV olarak dışa aktarılabilir.
+
+\subsection{systemd servisi}
+
+Kurucu; kaynakları \texttt{/opt/tbl221-record}, yapılandırmayı \texttt{/etc/tbl221-record.toml}, veriyi ise \texttt{/var/lib/tbl221-record} altında konumlandırır. Unit dosyası hata hâlinde beş saniye sonra yeniden başlatma uygular. \texttt{NoNewPrivileges}, \texttt{ProtectSystem=strict}, \texttt{ProtectHome} ve yalnız veri dizinine yazma izni, servisin erişim alanını sınırlar \cite{systemdexec}. Kurulum ve izleme komutları şöyledir:
+
+\begin{lstlisting}[language=bash]
+sudo python3 tbl221-record/install.py install
+systemctl status tbl221-record
+journalctl -u tbl221-record -f
+\end{lstlisting}
+
+\section{Testler ve bulgular}
+
+Birim testleri standart \texttt{unittest} ile hazırlanmıştır. CPU fark hesabı, kB--byte dönüşümü, ölçümün SQLite'a yazılıp okunması ve eşik bekleme davranışı sınanmıştır. Dört testin tamamı başarıyla geçmiştir. Ayrıca \texttt{--once} seçeneğiyle gerçek Linux kaynaklarından ölçüm alınmış, sonuç SQLite'a yazılmış ve CPU/bellek/disk yüzdelerinin geçerli aralıkta olduğu doğrulanmıştır. Python kaynaklarının tamamı \texttt{compileall} ile derlenmiş ve grafik arayüzü Qt offscreen platformunda başlatılmıştır.
+
+\begin{table}[ht]
+\centering
+\caption{Uygulanan doğrulamalar.}
+\label{tab:testler}
+\begin{tabularx}{\columnwidth}{@{}p{22mm}Xc@{}}
+\toprule
+Test & Doğrulanan davranış & Sonuç \\
+\midrule
+Birim testleri & Ayrıştırma, CPU hesabı, DB ve cooldown & 4/4 \\
+Sözdizimi & İki bileşendeki Python dosyaları & Başarılı \\
+Gerçek ölçüm & \texttt{/proc}, disk ve SQLite akışı & Başarılı \\
+Arayüz & Veritabanıyla offscreen başlangıç & Başarılı \\
+Rapor & PDF üretimi & Başarılı \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+Kontrollü yük testi için mantıksal işlemci sayısı kadar sınırlı süreli işçi çalıştırılarak CPU grafiğinde artış ve \texttt{alerts} tablosunda uyarı gözlenebilir. Servis yeniden başlatma testi \texttt{systemctl restart tbl221-record} sonrasında \texttt{is-active} sonucu ve yeniden başlatma öncesi/sonrası kayıtların sürekliliğiyle yapılır. Ayrıntılı ve tekrar üretilebilir komutlar proje içindeki \texttt{docs/commands.md} dosyasında verilmiştir. Bu iki sistem düzeyi senaryo, geliştirme ortamında root yetkisiyle systemd kurulumu yapılmadığından otomatik doğrulama sonucuna dâhil edilmemiştir.
+
+\section{Sonuç}
+
+Linux kaynaklarını grafik oturumundan bağımsız biçimde izleyen, zaman damgalı olarak saklayan ve eşik aşımlarında uyarı üreten çalışır bir sistem geliştirilmiştir. Standart kitaplığa dayalı kayıt servisi düşük kurulum maliyeti sağlarken SQLite WAL ve ayrı grafik uygulaması veri toplama ile sunumu birbirinden ayırmıştır. Yapılandırma, saklama politikası, CSV çıktısı ve systemd güvenlik seçenekleri uygulamanın uzun süreli kullanıma uygunluğunu artırmaktadır. Gelecekte ağ trafiği, süreç bazlı geçmiş ve uzaktan bildirim desteği eklenebilir.
+
+\begin{thebibliography}{9}
+\bibitem{procstat}
+Linux Kernel Documentation, ``The /proc Filesystem,'' \url{https://docs.kernel.org/filesystems/proc.html}, erişim: 18 Kasım 2026.
+
+\bibitem{procman}
+M. Kerrisk, ``proc(5)---process information pseudo-filesystem,'' Linux man-pages, \url{https://man7.org/linux/man-pages/man5/proc.5.html}, erişim: 18 Kasım 2026.
+
+\bibitem{sqlitewal}
+SQLite, ``Write-Ahead Logging,'' \url{https://sqlite.org/wal.html}, erişim: 18 Kasım 2026.
+
+\bibitem{systemdexec}
+Freedesktop.org, ``systemd.exec,'' \url{https://www.freedesktop.org/software/systemd/man/latest/systemd.exec.html}, erişim: 18 Kasım 2026.
+
+\bibitem{python}
+Python Software Foundation, ``Python 3 Library Reference,'' \url{https://docs.python.org/3/library/}, erişim: 18 Kasım 2026.
+\end{thebibliography}
+
+\end{document}

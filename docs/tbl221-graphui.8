@@ -1,0 +1,103 @@
+.TH TBL221-GRAPHUI 8 "18 Kasım 2026" "tbl221-graphui 1.0.0" "Sistem Yönetimi Komutları"
+.SH NAME
+tbl221-graphui \- TBL221 kaynak ölçümlerini grafik arayüzünde görüntüler
+.SH KULLANIM
+.B tbl221-graphui
+.RI [ seçenekler ]
+.br
+.B python3 main.py
+.RI [ seçenekler ]
+.SH AÇIKLAMA
+.B tbl221-graphui
+.BR tbl221-record (8)
+tarafından oluşturulan SQLite veritabanını salt okunur kipte açan PySide6
+tabanlı bir masaüstü uygulamasıdır.
+.PP
+Arayüz en güncel CPU, bellek ve disk kullanımını ve süreç sayısını kartlarda;
+CPU, bellek, disk ve bir dakikalık yük ortalamasının geçmişini çizgi
+grafiklerde gösterir. Son uyarılar ayrı bir tabloda listelenir. Görüntü her beş
+saniyede bir otomatik yenilenir ve
+.B Yenile
+düğmesiyle elle de güncellenebilir.
+.PP
+.B Gösterilecek ölçüm
+alanı grafiklerde kullanılacak en yeni kayıt sayısını 10 ile 1000 arasında
+seçer; başlangıç değeri 120'dir.
+.B CSV Dışa Aktar
+düğmesi o anda yüklenmiş ölçümleri seçilen UTF-8 CSV dosyasına yazar.
+Veritabanı henüz mevcut değilse, okunamıyorsa veya uygun kayıt içermiyorsa
+uygulama açık kalır ve veri beklediğini bildirir.
+.SH SEÇENEKLER
+.TP
+.BI \-\-database " DOSYA"
+Okunacak recorder SQLite veritabanının yolunu belirtir. Bu seçenek
+.B TBL221_DATABASE
+ortam değişkenini ve yerleşik varsayılanı geçersiz kılar.
+.TP
+.BR \-h , " " \-\-help
+Kısa kullanım bilgisini gösterir ve çıkar.
+.SH ORTAM
+.TP
+.B TBL221_DATABASE
+.B \-\-database
+verilmediğinde okunacak SQLite veritabanını belirtir. Değişken tanımlı değilse
+.I /var/lib/tbl221-record/tbl221-record.db
+kullanılır.
+.PP
+Qt tarafından desteklenen standart ortam değişkenleri de geçerlidir. Örneğin
+grafik oturumu olmayan ortamlarda uygun Qt platform eklentisinin bulunması
+gerekir.
+.SH DOSYALAR
+.TP
+.I /var/lib/tbl221-record/tbl221-record.db
+Varsayılan ölçüm ve uyarı veritabanı. Uygulama dosyayı salt okunur açar.
+.TP
+.I tbl221-readings.csv
+CSV dışa aktarma iletişim kutusunda önerilen dosya adı. Kullanıcı başka bir ad
+ve konum seçebilir.
+.SH GEREKSİNİMLER
+Python 3.11 veya üzeri ve PySide6 6.8 veya üzeri gerekir. Bir grafik masaüstü
+oturumu ve çalışır bir Qt platform eklentisi bulunmalıdır.
+.PP
+Veritabanının
+.B tbl221-record
+tarafından oluşturulan
+.B readings
+ve
+.B alerts
+tablolarını içermesi beklenir.
+.SH ÇIKIŞ DURUMU
+Normal Qt uygulama kapanışında 0 döndürülür. Geçersiz komut satırı seçenekleri,
+PySide6'nın bulunmaması veya uygulamanın başlatılamaması sıfırdan farklı bir
+durumla sonuçlanır.
+.SH ÖRNEKLER
+Varsayılan sistem veritabanını görüntülemek:
+.PP
+.nf
+.RS
+tbl221-graphui
+.RE
+.fi
+.PP
+Geçici bir veritabanını görüntülemek:
+.PP
+.nf
+.RS
+python3 main.py \-\-database /tmp/tbl221-record.db
+.RE
+.fi
+.PP
+Veritabanını ortam değişkeniyle seçmek:
+.PP
+.nf
+.RS
+TBL221_DATABASE=/tmp/tbl221-record.db tbl221-graphui
+.RE
+.fi
+.SH AYRICA BAKINIZ
+.BR tbl221-record (8),
+.BR sqlite3 (1)
+.SH YAZAR
+Yiğit Cemal Öztürk.
+.SH LİSANS
+BSD 3-Clause lisansı altında yayımlanmıştır.
