@@ -1,20 +1,34 @@
 report/PROMPT.md
 
-# LaTeX build artifacts (keep report.tex and the final report.pdf)
-report/*.aux
-report/*.bbl
-report/*.bcf
-report/*.blg
-report/*.fdb_latexmk
-report/*.fls
-report/*.lof
-report/*.log
-report/*.lot
-report/*.out
-report/*.run.xml
-report/*.synctex.gz
-report/*.toc
-report/*.xdv
+# LaTeX build artifacts (keep .tex sources and final PDFs)
+*.aux
+*.bbl
+*.bcf
+*.blg
+*.fdb_latexmk
+*.fls
+*.lof
+*.log
+*.lot
+*.nav
+*.out
+*.run.xml
+*.snm
+*.synctex.gz
+*.toc
+*.vrb
+*.xdv
+*.acn
+*.acr
+*.alg
+*.glg
+*.glo
+*.gls
+*.idx
+*.ilg
+*.ind
+*.ist
+*.dvi
 report/raportaslak.doc
 report/report.pdf
 

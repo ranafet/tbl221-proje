@@ -1,0 +1,87 @@
+\documentclass[aspectratio=169,10pt]{beamer}
+
+\usetheme{Boadilla}
+\usecolortheme{default}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{lmodern}
+
+\definecolor{TBLNavy}{RGB}{20,35,58}
+\definecolor{TBLBlue}{RGB}{40,111,160}
+\definecolor{TBLTeal}{RGB}{24,145,137}
+\definecolor{TBLLight}{RGB}{239,245,249}
+\setbeamercolor{structure}{fg=TBLBlue}
+\setbeamercolor{title}{fg=white,bg=TBLNavy}
+\setbeamercolor{frametitle}{fg=white,bg=TBLNavy}
+\setbeamercolor{block title}{fg=white,bg=TBLBlue}
+\setbeamercolor{block body}{fg=TBLNavy,bg=TBLLight}
+\setbeamercolor{alerted text}{fg=TBLTeal}
+\setbeamertemplate{navigation symbols}{}
+\setbeamertemplate{footline}[frame number]
+\setbeamersize{text margin left=10mm,text margin right=10mm}
+\setlength{\parskip}{0.5em}
+\setlength{\emergencystretch}{3em}
+
+\title[Linux Resource Monitor]{Speaking Notes: Linux System Resource Monitoring}
+\subtitle{Five technical sources behind the presentation}
+\author{Yiğit Cemal Öztürk \and Murat Karatekin}
+\institute{Kocaeli University \\ TBL221 Linux Operating System Usage and Administration}
+\date{}
+
+\begin{document}
+
+\begin{frame}[plain]
+  \titlepage
+\end{frame}
+
+\begin{frame}{1. Linux Kernel Documentation: ``The /proc Filesystem''}
+\begin{block}{Speaking note}
+The CPU values exposed through \texttt{/proc/stat} are cumulative counters, not a ready-made utilization percentage. Our recorder compares successive samples and derives utilization from their differences, so the sampling interval matters.
+\end{block}
+\begin{itemize}
+  \item Connect this source to the CPU measurement row in the main presentation.
+  \item Keep the distinction clear: the kernel exposes counters; the recorder calculates the percentage.
+\end{itemize}
+\end{frame}
+
+\begin{frame}{2. Linux man-pages: \texttt{proc(5)}}
+\begin{block}{Speaking note}
+This manual documents process and memory information exposed through \texttt{/proc}. For memory, emphasize \texttt{MemAvailable} rather than interpreting the \texttt{free} field alone; the project's reported used-memory value is total minus available.
+\end{block}
+\begin{itemize}
+  \item Connect this source to process counting and memory measurement.
+  \item The project uses \texttt{MemAvailable} as part of its used-memory calculation.
+\end{itemize}
+\end{frame}
+
+\begin{frame}{3. SQLite: ``Write-Ahead Logging''}
+\begin{block}{Speaking note}
+WAL lets readers continue using a stable database snapshot while the recorder appends new records. This suits our one-writer, read-only-dashboard design. Do not imply unlimited concurrency or describe WAL as a backup mechanism.
+\end{block}
+\begin{itemize}
+  \item Connect this source to the separation between the recorder and dashboard.
+  \item The relevant use case is one writer with a concurrent reader.
+\end{itemize}
+\end{frame}
+
+\begin{frame}{4. Python Software Foundation: Python 3 Library Reference}
+\begin{block}{Speaking note}
+The recorder's dependency-free claim means it relies on Python's standard library for its runtime needs. This reference documents those APIs, but it is not evidence of the project's test results. PySide6 remains a separate GUI dependency.
+\end{block}
+\begin{itemize}
+  \item Connect this source to the local-run and implementation slide.
+  \item Distinguish the recorder's standard-library-only runtime from the GUI dependency.
+\end{itemize}
+\end{frame}
+
+\begin{frame}{5. Freedesktop.org: \texttt{systemd.exec}}
+\begin{block}{Speaking note}
+Options such as \texttt{NoNewPrivileges}, \texttt{ProtectSystem}, and restricted writable paths reduce the service's privileges and filesystem access. Present them as defense in depth, not as a guarantee of complete isolation.
+\end{block}
+\begin{itemize}
+  \item Connect this source to the service and packaging slide.
+  \item The aim is to limit the service's access, not to claim that all risks are eliminated.
+\end{itemize}
+\end{frame}
+
+\end{document}

@@ -1,0 +1,12 @@
+[Desktop Entry]
+Type=Application
+Version=1.0
+Name=TBL221 System Monitor
+Comment=Start the recorder and open the Linux resource dashboard
+Exec=/home/sparkles/proj/ders/tbl221/tbl221-proje/start-monitor.sh
+Path=/home/sparkles/proj/ders/tbl221/tbl221-proje
+Icon=utilities-system-monitor
+Terminal=false
+Categories=System;Monitor;
+Keywords=system;monitor;cpu;memory;disk;
+StartupNotify=true

@@ -24,7 +24,7 @@ help:
 	  'make clean        Remove generated artifacts'
 
 build:
-	$(PYTHON) -m compileall -q tbl221-record tbl221-graphui packaging/debian/build.py
+	$(PYTHON) -m compileall -q tbl221-record tbl221-graphui packaging/debian/build.py packaging/container/gui_smoke.py
 
 test: build
 	$(PYTHON) -m unittest discover -s tbl221-record/tests -v

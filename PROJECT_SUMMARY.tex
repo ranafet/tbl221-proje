@@ -1,0 +1,282 @@
+\documentclass[11pt,a4paper]{article}
+
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{lmodern}
+\usepackage{geometry}
+\usepackage{hyperref}
+\usepackage{enumitem}
+\usepackage{xcolor}
+\usepackage{listings}
+\usepackage{booktabs}
+\usepackage{longtable}
+
+\geometry{margin=2.5cm}
+\hypersetup{
+  colorlinks=true,
+  linkcolor=blue!60!black,
+  urlcolor=blue!60!black
+}
+\setlist{nosep}
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{0.6em}
+
+\lstdefinestyle{paths}{
+  basicstyle=\ttfamily\small,
+  breaklines=true,
+  frame=single,
+  backgroundcolor=\color{black!3}
+}
+
+\title{TBL221 Linux System Resource Monitor\\Source Code Summary}
+\author{}
+\date{\today}
+
+\begin{document}
+
+\maketitle
+\tableofcontents
+\newpage
+
+\section{Overview}
+
+This repository implements a Linux resource-monitoring system in Python 3.11 or newer. It consists of two applications connected through a shared SQLite database:
+
+\begin{enumerate}
+  \item \texttt{tbl221-record}: a dependency-free background recorder that collects Linux resource metrics, persists them, and creates threshold alerts;
+  \item \texttt{tbl221-graphui}: a PySide6 desktop dashboard that reads the database and presents current values, historical charts, alerts, and CSV export.
+\end{enumerate}
+
+The main data flow is:
+
+\begin{center}
+\texttt{/proc and filesystem} $\longrightarrow$ \texttt{recorder} $\longrightarrow$ \texttt{SQLite} $\longrightarrow$ \texttt{dashboard}
+\end{center}
+
+TOML configuration controls the recorder. The recorder is the only component that writes monitoring data; the graphical application opens the database in read-only mode.
+
+\section{Resource Recorder}
+
+\subsection{Entry Point and Sampling Loop}
+
+The recorder entry point is \texttt{tbl221-record/main.py}. It performs the following tasks:
+
+\begin{itemize}
+  \item parses \texttt{--config}, \texttt{--database}, \texttt{--interval}, \texttt{--once}, and \texttt{--verbose};
+  \item loads TOML configuration and applies command-line overrides;
+  \item initializes the SQLite schema;
+  \item handles \texttt{SIGINT} and \texttt{SIGTERM} for graceful shutdown;
+  \item periodically collects and stores system measurements;
+  \item evaluates alert thresholds after every successful measurement;
+  \item removes expired measurements and alerts every 720 samples.
+\end{itemize}
+
+The loop uses \texttt{time.monotonic()} for scheduling, which reduces drift caused by wall-clock adjustments. Measurement errors derived from \texttt{OSError} or \texttt{ValueError} are logged and do not terminate the service. In \texttt{--once} mode, the program takes one measurement and exits.
+
+\subsection{Metric Collection}
+
+The module \texttt{tbl221-record/util/perfreader.py} collects metrics using Linux interfaces and the Python standard library:
+
+\begin{longtable}{@{}ll@{}}
+\toprule
+Metric & Source \\
+\midrule
+CPU utilization & Aggregate counters in \texttt{/proc/stat} \\
+Memory and swap & \texttt{/proc/meminfo} \\
+Disk utilization & \texttt{shutil.disk\_usage()} \\
+Process count & Numeric process directories under \texttt{/proc} \\
+Load averages & \texttt{os.getloadavg()} \\
+\bottomrule
+\end{longtable}
+
+CPU utilization is calculated from the difference between two aggregate CPU snapshots. The implementation subtracts the idle-counter delta from the total-counter delta and clamps the result to the range 0--100. Memory values from \texttt{/proc/meminfo} are converted to bytes. Used memory is based on \texttt{MemAvailable}, with \texttt{MemFree} as a fallback.
+
+\subsection{Measurement Model}
+
+The module \texttt{tbl221-record/model/perflog.py} defines an immutable, slotted \texttt{PerfLog} dataclass. A measurement contains:
+
+\begin{itemize}
+  \item Unix timestamp;
+  \item CPU percentage;
+  \item used and total memory;
+  \item used and total swap;
+  \item used and total disk space;
+  \item process count;
+  \item 1-, 5-, and 15-minute load averages.
+\end{itemize}
+
+Memory and disk quantities are stored in bytes. Computed properties provide memory, swap, and disk percentages while safely handling zero totals.
+
+\subsection{Database Layer}
+
+The database implementation is in \texttt{tbl221-record/db/\_\_init\_\_.py}. It creates two tables:
+
+\begin{description}
+  \item[\texttt{readings}] stores all resource measurements;
+  \item[\texttt{alerts}] stores threshold violations and their generated messages.
+\end{description}
+
+Both tables have timestamp indexes. Connections use SQLite WAL journal mode and a five-second busy timeout, helping concurrent recorder writes and dashboard reads coexist. Operations use short-lived, context-managed connections.
+
+The database layer supports initialization, inserting readings, inserting alerts, retrieving recent records, and deleting data older than the configured retention period. It also retains compatibility functions from an earlier module API.
+
+\subsection{Alert Processing}
+
+\texttt{AlertManager}, defined in \texttt{tbl221-record/main.py}, evaluates four metrics:
+
+\begin{itemize}
+  \item CPU percentage;
+  \item memory percentage;
+  \item disk percentage;
+  \item one-minute load average.
+\end{itemize}
+
+When a value reaches or exceeds its configured threshold, the manager inserts an alert into SQLite and writes a warning to the application log. Repeated alerts for the same metric are suppressed during a configurable cooldown period.
+
+Cooldown timestamps are held only in memory. Consequently, restarting the recorder resets cooldown state and can allow a new alert immediately after startup.
+
+\subsection{Configuration}
+
+Configuration is implemented in \texttt{tbl221-record/config/\_\_init\_\_.py} and parsed with the standard-library \texttt{tomllib} module. Supported settings include:
+
+\begin{itemize}
+  \item recording interval;
+  \item SQLite database path;
+  \item filesystem path whose disk usage is measured;
+  \item retention period in days;
+  \item metric thresholds;
+  \item alert cooldown in seconds.
+\end{itemize}
+
+The default configuration path is \texttt{/etc/tbl221-record.toml}. It can be changed with the \texttt{TBL221\_CONFIG} environment variable or the \texttt{--config} option. Command-line database and interval values override TOML values. Intervals are clamped to at least 0.1 seconds, while retention and cooldown values cannot be negative. An example configuration is provided at \texttt{tbl221-record/config/default.toml}.
+
+\section{Graphical Dashboard}
+
+The graphical application is implemented in the single module \texttt{tbl221-graphui/main.py} and depends on PySide6.
+
+\subsection{Read-Only Data Access}
+
+The \texttt{DataStore} class opens the recorder database through a SQLite read-only URI. It retrieves recent readings in chronological order and recent alerts in reverse chronological order. If the database does not exist or a SQLite operation fails, it returns an empty result rather than terminating the application.
+
+This design keeps the two applications loosely coupled: the recorder and dashboard may start and stop independently, and the dashboard cannot accidentally modify monitoring data.
+
+\subsection{User Interface}
+
+The main \texttt{Dashboard} window contains:
+
+\begin{itemize}
+  \item cards for CPU, memory, disk, and process count;
+  \item line charts for CPU, memory, disk, and one-minute load;
+  \item a table of recent alerts;
+  \item a selector for loading between 10 and 1000 measurements;
+  \item manual and automatic refresh controls;
+  \item CSV export for the currently loaded measurements;
+  \item a status line showing the database path and age of the latest sample.
+\end{itemize}
+
+The interface refreshes every five seconds. Charts are painted directly with \texttt{QPainter}, avoiding an additional charting dependency. Percentage charts use a fixed 0--100 scale, whereas the load chart scales according to its current values.
+
+The dashboard uses a dark stylesheet. Metric values turn red when they cross built-in visual warning levels. These display thresholds are currently hardcoded in the GUI and are not loaded from the recorder's TOML configuration.
+
+The database path can be selected with \texttt{--database} or the \texttt{TBL221\_DATABASE} environment variable.
+
+\section{Installation and Service Management}
+
+\subsection{Direct Installer}
+
+The script \texttt{tbl221-record/install.py} installs or removes the recorder as a systemd service. Installation requires root privileges and performs the following operations:
+
+\begin{itemize}
+  \item copies source files to \texttt{/opt/tbl221-record};
+  \item installs configuration at \texttt{/etc/tbl221-record.toml} if it does not already exist;
+  \item creates \texttt{/var/lib/tbl221-record};
+  \item installs the service unit under \texttt{/etc/systemd/system};
+  \item reloads systemd, enables the service, and normally starts it.
+\end{itemize}
+
+Uninstallation removes the program and service unit but deliberately preserves configuration and recorded data.
+
+\subsection{Systemd Hardening}
+
+The service unit runs the recorder as root and restarts it after failures. It applies several hardening directives:
+
+\begin{itemize}
+  \item \texttt{NoNewPrivileges=true};
+  \item \texttt{PrivateTmp=true};
+  \item \texttt{ProtectSystem=strict};
+  \item \texttt{ProtectHome=true};
+  \item write access restricted to \texttt{/var/lib/tbl221-record}.
+\end{itemize}
+
+Standard output and errors are sent to the systemd journal.
+
+\section{Build and Packaging}
+
+The root \texttt{Makefile} provides targets for compile checks, tests, Python distributions, Debian packages, RPM packages, OCI container tests, and cleanup.
+
+The project supports:
+
+\begin{itemize}
+  \item Python wheels and source distributions for both applications;
+  \item reproducible source archives;
+  \item separate Debian packages for the recorder and dashboard;
+  \item separate RPM packages;
+  \item command wrappers, a desktop entry, systemd integration, and manual pages.
+\end{itemize}
+
+The script \texttt{packaging/debian/build.py} constructs Debian archives directly with Python's standard library. It builds the \texttt{ar}, control, and data archives without requiring the normal Debian packaging toolchain. It also supports reproducible timestamps through \texttt{SOURCE\_DATE\_EPOCH}.
+
+The recorder package installs the service, default configuration, executable wrapper, Python modules, documentation, and manual pages. The dashboard package installs its launcher, desktop entry, application module, and documentation.
+
+\section{Tests and Continuous Integration}
+
+Unit tests are located in \texttt{tbl221-record/tests/test\_monitor.py}. They cover:
+
+\begin{itemize}
+  \item parsing aggregate CPU counters;
+  \item calculating CPU utilization from counter deltas;
+  \item converting \texttt{/proc/meminfo} values to bytes;
+  \item inserting and retrieving SQLite readings;
+  \item threshold detection and cooldown suppression.
+\end{itemize}
+
+The tests concentrate on recorder internals. The GUI does not have detailed interaction or widget-level tests.
+
+The root \texttt{Containerfile} creates a Python 3.13 test image, installs PySide6, copies the repository, switches to an unprivileged user, and executes the container test script. The \texttt{QT\_QPA\_PLATFORM=offscreen} setting permits GUI testing without a display server.
+
+The smoke test in \texttt{packaging/container/gui\_smoke.py} dynamically loads the dashboard, displays it briefly, and exits through a timer. This verifies basic GUI initialization rather than complete behavior.
+
+The GitHub Actions workflow builds the OCI test image on pushes, pull requests, and manual runs. Because the container executes tests during its build, a successful image build also verifies the included unit and smoke tests.
+
+\section{Design Assessment}
+
+\subsection{Strengths}
+
+\begin{itemize}
+  \item The recorder has no third-party runtime dependencies.
+  \item Linux metrics are gathered through simple, transparent system interfaces.
+  \item SQLite provides a durable and understandable boundary between processes.
+  \item WAL mode supports simultaneous recorder writes and dashboard reads.
+  \item The GUI uses read-only database access.
+  \item The sampling loop handles signals and transient measurement failures cleanly.
+  \item Installation, native packaging, manual pages, container testing, and CI are included.
+  \item Most modules are compact and have clearly separated responsibilities.
+\end{itemize}
+
+\subsection{Limitations and Maintenance Considerations}
+
+\begin{itemize}
+  \item Alert cooldown state is not persisted across recorder restarts.
+  \item GUI warning thresholds are duplicated as constants rather than shared with recorder configuration.
+  \item GUI database exceptions are silently converted into empty results, which can hide the reason data is unavailable.
+  \item Unit-test coverage is modest and primarily targets the recorder.
+  \item The GUI and recorder duplicate the SQLite column list and percentage calculations.
+  \item Data pruning is triggered by sample count, so the real pruning frequency varies with the configured interval.
+  \item The direct installer and native package layouts use different installation paths and service files, increasing maintenance overhead.
+\end{itemize}
+
+\section{Conclusion}
+
+The repository is a compact but complete Linux monitoring project. Its architecture separates privileged or background data collection from visualization through SQLite, keeps recorder dependencies minimal, and includes practical service, packaging, documentation, and test infrastructure. The most valuable future improvements would be sharing schema and threshold definitions between applications, making GUI database failures visible, persisting alert cooldown state when necessary, and expanding automated coverage for configuration, retention, collection failures, and dashboard behavior.
+
+\end{document}
